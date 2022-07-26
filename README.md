@@ -7,4 +7,6 @@ In the repository you can find:
 - a .mos file with the code 
 - a .docx file with the problem description and the mathematical assumption made
 
-![Sunglasses](https://github.com/zedef99/Safilo-Problem/blob/8d29f959da086fe3afbc931e3b768ad4afea0799/Mens%20Vintage%20Retro%20Gold%20Frame%20Black%20Tint%20Summer%20Sunglasses.jpeg)
+<p align="center">
+  <img width="500" src="https://github.com/zedef99/Safilo-Problem/blob/8d29f959da086fe3afbc931e3b768ad4afea0799/Mens%20Vintage%20Retro%20Gold%20Frame%20Black%20Tint%20Summer%20Sunglasses.jpeg">
+</p>
