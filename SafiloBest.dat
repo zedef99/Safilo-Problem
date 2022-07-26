@@ -1,0 +1,60 @@
+!set of products
+PRODUCTS: ["CARRERA" "BOSS" "JIMMYCHOO" "POLAROID" "TOMMY" "DSQUARED" "MOSCHINO"]
+
+!QUANTITY, SALES_PRICE, RESOURCE_T_REQ and MAN_HOURS_REQ
+PRODUCTS_DATA:[
+                (CARRERA)   [3100       22      14      0.1]
+                (BOSS)      [2600       40      16      0.15]
+                (JIMMYCHOO) [1800       55      19      0.20]
+                (POLAROID)  [3500       9       17      0.07]
+                (TOMMY)     [3000       35      13      0.09]
+                (DSQUARED)  [2500       100     18      0.18]
+                (MOSCHINO)  [1900       97      20      0.19]
+              ]
+
+!Strategic resource T (=titanium) availability
+RESOURCE_T_AVAIL: 275000
+
+! set of plants
+PLANTS: ["Longarone" "SantaMaria"]
+
+!Plant data
+! MACHINE_TIME_AVAIL(ability)
+! Measures in hours
+MACHINE_TIME_AVAIL: [
+		        (Longarone)   1200
+                        (SantaMaria)  1080
+           ]
+
+! matrix which has a row for each product and a column for plant
+! Entriy (i,j) is the machine-time necessary for producing product i (the entire batch) in plant j (measures in hours)
+MACHINE_TIME_BATCH: [
+        288  280
+        272  264
+        296  304
+        256  264
+        264  272
+        288  296
+        280  272
+       ]
+
+! matrix which has a row for each product and a column for plant
+! Entriy (i,j) is the cost of carrying on product i in plant j
+COST: [
+        6.6     6
+        13.8    13.2
+        14      13.7
+        3       3.3
+        10.5    10
+        20      20.2
+        34      33
+       ]
+
+MAN_HOURS_AVAIL: 1800
+MAX_OVERTIME: 360
+COST_PER_OVERTIME_HOUR: 15
+
+
+
+
+

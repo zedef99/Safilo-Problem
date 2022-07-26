@@ -1,0 +1,177 @@
+model "Safilo Problem"
+
+  uses "mmxprs"
+
+  declarations
+    !Elements of the system
+    PLANTS: set of string
+    PRODUCTS: set of string
+  end-declarations
+
+  initializations from 'SafiloBest.dat'
+    PLANTS
+    PRODUCTS
+  end-initializations
+
+  declarations
+    !Elements of the system
+    RESOURCE_T_AVAIL: integer
+
+    !Parameters for scenario 1
+    SALES_PRICE: array(PRODUCTS) of integer
+    RESOURCE_T_REQ: array(PRODUCTS) of integer
+    QUANTITY:array(PRODUCTS) of integer
+    MAN_HOURS_REQ:array(PRODUCTS) of real
+
+    MAN_HOURS_AVAIL:integer
+
+    MACHINE_TIME_AVAIL: array(PLANTS) of integer
+    MACHINE_TIME_BATCH: array(PRODUCTS,PLANTS) of real
+    TOTAL_MACHINE_TIME:array(PRODUCTS,PLANTS) of real
+
+    COST: array(PRODUCTS, PLANTS) of real
+    TOTAL_COST:array(PRODUCTS, PLANTS) of real
+
+    !Parameters for scenario 2
+    COST_PER_OVERTIME_HOUR: integer
+    MAX_OVERTIME:integer
+
+    !Variables for scenario 1
+    x: array(PRODUCTS) of mpvar
+    y: array(PRODUCTS,PLANTS) of mpvar
+
+    !Variables for scenario 2
+    w: mpvar
+
+    !Constraint for model scenario 1
+    MaterialConsumptionConstraint: linctr
+    ProductCreationConstraint: array (PRODUCTS) of linctr
+    MachineTimeUsage: array (PLANTS) of linctr
+    Man_hoursConstraint: linctr
+    xBinaryContraint: array (PRODUCTS) of linctr
+    yBinaryContraint: array (PRODUCTS,PLANTS) of linctr
+
+    !Further constraint for model scenario 2
+    MaxOvertimeHoursConstraint: linctr
+
+    !Objective function
+    TotalProfit: linctr
+  end-declarations
+
+  !The values of the problem parameters are taken from an external file
+  initializations from 'SafiloBest.dat'
+    [QUANTITY, SALES_PRICE, RESOURCE_T_REQ, MAN_HOURS_REQ] as 'PRODUCTS_DATA'
+    RESOURCE_T_AVAIL
+    MACHINE_TIME_AVAIL
+    MACHINE_TIME_BATCH
+    COST
+    MAX_OVERTIME
+    COST_PER_OVERTIME_HOUR
+    MAN_HOURS_AVAIL
+  end-initializations
+
+  forall(p in PRODUCTS) do
+    EXPECTED_REVENUE(p):=QUANTITY(p)*SALES_PRICE(p)
+  end-do
+
+  forall(p in PRODUCTS, i in PLANTS) do
+    TOTAL_COST(p,i):=QUANTITY(p)*COST(p,i)
+  end-do
+
+procedure Model_Scenario1
+  !Objective: maximize profit
+  TotalProfit:= sum(p in PRODUCTS) EXPECTED_REVENUE(p)*x(p) - sum(p in PRODUCTS, i in PLANTS) TOTAL_COST(p,i)*y(p,i)
+  !Constraint preventing overuse of the resource T
+  MaterialConsumptionConstraint:= sum(p in PRODUCTS) RESOURCE_T_REQ(p)*QUANTITY(p)*x(p) <= RESOURCE_T_AVAIL
+  !Constraint preventing the overuse of workers hours available
+  Man_hoursConstraint:= sum(p in PRODUCTS) MAN_HOURS_REQ(p)*QUANTITY(p)*x(p)<= MAN_HOURS_AVAIL
+  !Constraints that require a brand to be produced in one and only one plant, provided it has been selected.
+  forall(p in PRODUCTS)
+    ProductCreationConstraint(p):= sum(i in PLANTS) y(p,i) = x(p)
+  !Constraints preventing the overuse of machine-time in plant
+  forall(i in PLANTS)
+    MachineTimeUsage(i):= sum(p in PRODUCTS) MACHINE_TIME_BATCH(p,i)*y(p,i) <= MACHINE_TIME_AVAIL(i)
+  !Binary constraints: decision variables are binary
+  forall(p in PRODUCTS) xBinaryContraint(p):= x(p) is_binary
+  forall(p in PRODUCTS, i in PLANTS) yBinaryContraint(p,i):= y(p,i) is_binary
+  !Solve the problem
+  maximize(TotalProfit)
+end-procedure
+
+procedure Model_Scenario2
+  !Objective: maximize the profit
+  TotalProfit:= sum(p in PRODUCTS) EXPECTED_REVENUE(p)*x(p)  - sum(p in PRODUCTS, i in PLANTS) TOTAL_COST(p,i)*y(p,i) - COST_PER_OVERTIME_HOUR*w
+  !Constraint preventing the overuse of workers hours available
+  Man_hoursConstraint:= sum(p in PRODUCTS) MAN_HOURS_REQ(p)*QUANTITY(p)*x(p)<= MAN_HOURS_AVAIL + w
+  !Constraint for the max overtime hours
+  MaxOvertimeHoursConstraint:= w <= MAX_OVERTIME
+  !Optimization
+  maximize(TotalProfit)
+end-procedure
+
+procedure Model_Scenario3
+  !Objective: maximize the profit
+  TotalProfit:= sum(p in PRODUCTS) EXPECTED_REVENUE(p)*x(p)  - sum(p in PRODUCTS, i in PLANTS) TOTAL_COST(p,i)*y(p,i)
+  !Constraint preventing the overuse of workers hours available
+  Man_hoursConstraint:= sum(p in PRODUCTS) MAN_HOURS_REQ(p)*QUANTITY(p)*x(p)<= MAN_HOURS_AVAIL
+  !In this case i don't want to take into account the MaxOvertimeHoursConstraint
+  sethidden(MaxOvertimeHoursConstraint,true)
+
+  !if you produce CARRERA you also produce BOSS
+  x("CARRERA")<=x("BOSS")
+  !produce the POLAROID batch
+  !x("POLAROID") = 1
+  !produce only one high-end brand
+  !x("JIMMYCHOO")+x("DSQUARED")+x("MOSCHINO")<=1
+
+  !Optimization
+  maximise(TotalProfit)
+end-procedure
+
+procedure PrintStatus(Model:string)
+  writeln("!******************************************************")
+  writeln("Problem objective function value for model ", Model,": ", getobjval)
+  write("Problem status for model ", Model, ": ")
+  case getprobstat of
+   XPRS_OPT: writeln("Solved")
+   XPRS_UNF: writeln("Unfinished")
+   XPRS_INF: writeln("Infeasible")
+   XPRS_UNB: writeln("Unbounded")
+   XPRS_OTH: writeln("Failed")
+   else writeln("???")
+  end-case
+end-procedure
+
+procedure PrintResults(Scenario:string)
+  writeln
+  writeln(Scenario)
+  writeln("total profit: ", getobjval)
+  writeln
+  forall(p in PRODUCTS | getsol(x(p)) > 0.5 ) do
+    write(string(p) + ", expected revenue " + EXPECTED_REVENUE(p) + ", carried on in plant: ")
+    forall(i in PLANTS | getsol(y(p,i)) > 0.5 ) write(string(i) + ", at cost " + TOTAL_COST(p,i))
+    writeln
+  end-do
+  writeln("overtime hours: " + getsol(w))
+  writeln
+end-procedure
+
+procedure Main
+	writeln("Loading and solving models...\n");
+  	Model_Scenario1;
+  	PrintStatus("Model_Scenario1");
+  	PrintResults("Model_Scenario1");
+  	Model_Scenario2;
+  	PrintStatus("Model_Scenario2");
+  	PrintResults("Model_Scenario2");
+  	Model_Scenario3;
+  	PrintStatus("Model_Scenario3");
+  	PrintResults("Model_Scenario3");
+	writeln("\n done!");
+end-procedure
+
+Main
+
+end-model
+
+
