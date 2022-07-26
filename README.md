@@ -1,5 +1,4 @@
 # Safilo-Problem
-University course project
 
 For this work i used **FICO XPRESS MOSEL** and tried to solve an optimization problem based on Safilo Group data.
 
